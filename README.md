@@ -3,7 +3,7 @@
 ## Project Overview
 This project implements an intelligent Retrieval-Augmented Generation (RAG) agent capable of answering complex user queries by leveraging a local knowledge base (ChromaDB) and Google's Gemini models for advanced reasoning and text generation. Built with `langgraph`, this agent demonstrates a robust, multi-step, and self-correcting research and synthesis workflow.
 
-## Architecture Design
+## Architecture 
 
 ![RAG Agent Architecture Diagram](images/output.png)
 
