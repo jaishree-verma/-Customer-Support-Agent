@@ -37,14 +37,14 @@ def build_knowledge_base(
             file_path = os.path.join(root, file)
             extension = os.path.splitext(file_path)[1]
 
-            if file_path in updated_manifest:
+            if file in updated_manifest or file_path in updated_manifest:
                 print(f"Skipping already processed file: {file}")
                 continue
 
             if extension in supported_extensions:
                 loader = supported_extensions[extension](file_path)
                 file_docs = loader.load()
-                updated_manifest[file_path] = True
+                updated_manifest[file] = True
                 documents.extend(file_docs)
                 print(f"Loaded {len(file_docs)} pages from {file}")
             else:
