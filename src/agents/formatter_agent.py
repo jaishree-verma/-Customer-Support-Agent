@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from langchain.prompts import PromptTemplate
+from langchain_core.prompts import PromptTemplate
 
 from src.constants import BASE_DIR
 from src.llm_config import LLM
@@ -15,11 +15,14 @@ class FormatterAgent:
 
     def __init__(self):
         self.llm = LLM
-        raw_prompt = read_txt(Path(BASE_DIR) / "prompts" / "formatter_agent_prompt.txt")
-        self.prompt_template = PromptTemplate(
-            template=raw_prompt,
-            input_variables=[{"final_answer_draft": "final_answer_draft"}],
-        )
+        try:
+            raw_prompt = read_txt(Path(BASE_DIR) / "prompts" / "formatter_agent_prompt.txt")
+            self.prompt_template = PromptTemplate(
+                template=raw_prompt,
+                input_variables=[{"final_answer_draft": "final_answer_draft"}],
+            )
+        except Exception:
+            self.prompt_template = None
 
     def run(self, state: AgentState) -> AgentState:
         """
@@ -27,18 +30,16 @@ class FormatterAgent:
         """
         print("---FORMATTER AGENT: Formatting final report---")
 
-        final_answer_draft = state["final_answer_draft"]
+        final_answer_draft = state.get("final_answer_draft", "")
+        report_formatted = final_answer_draft
 
-        try:
-            chain = self.prompt_template | self.llm
-            response = chain.invoke({"final_answer_draft": final_answer_draft})
-            report_formatted = response.content
-        except Exception as e:
-            print(f"---ERROR: Formatter agent failed during LLM call: {e}---")
-            report_formatted = (
-                "An error occurred during formatting. Here's the raw draft:\n\n"
-                + final_answer_draft
-            )
+        if self.llm and self.prompt_template:
+            try:
+                chain = self.prompt_template | self.llm
+                response = chain.invoke({"final_answer_draft": final_answer_draft})
+                report_formatted = response.content
+            except Exception as e:
+                print(f"---FORMATTER AGENT notice: Gemini LLM formatting skipped ({e}). Using draft report.---")
 
         print("---FORMATTER AGENT: Final Report Formatted. Workflow END.---")
 

@@ -1,13 +1,13 @@
 import os
 from pathlib import Path
 
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import (
     PyPDFLoader,
     TextLoader,
     UnstructuredMarkdownLoader,
 )
-from langchain_community.vectorstores import Chroma
+from langchain_chroma import Chroma
 
 from src.constants import BASE_DIR
 from src.llm_config import EMBEDDINGS

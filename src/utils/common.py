@@ -1,7 +1,7 @@
 import json
 import os
 
-from langchain.prompts.chat import ChatPromptTemplate
+from langchain_core.prompts import ChatPromptTemplate
 
 
 def read_json(file_path):
