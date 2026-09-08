@@ -19,4 +19,4 @@ ENV LANGSMITH_PROJECT="customer-rag-agent"
 
 EXPOSE 8080
 
-CMD ["python", "-m", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["sh", "-c", "python ingest.py || true && python -m uvicorn app.main:app --host 0.0.0.0 --port 8080"]

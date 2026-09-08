@@ -1,0 +1,36 @@
+# QuantumFlow QF-2025 User & Troubleshooting Guide
+
+## Warranty Information
+The QuantumFlow QF-2025 comes with a standard 3-year limited manufacturer warranty from the date of original purchase. This warranty covers defect in materials, manufacturing flaws, and internal hardware components under normal residential operating conditions.
+
+To claim warranty support:
+1. Provide valid proof of purchase (invoice or digital order receipt).
+2. Register the device serial number at support.quantumflow.com.
+3. Extended warranty coverage up to 5 years is available via QuantumCare+ within 30 days of purchase.
+
+---
+
+## Power & Wi-Fi Troubleshooting
+
+### Power Connection Issues
+If the QuantumFlow QF-2025 fails to turn on or experiences unexpected power resets:
+- **Check Circuit Breaker:** Ensure the 120V main circuit breaker supplying power to the outlet has not tripped.
+- **Inspect Power Cable:** Check the 24V AC transformer harness for loose wire connection nuts or pinched insulation.
+- **Hard Reset:** Unplug the main power supply, wait 30 seconds, and reconnect. The green LED power indicator on the front panel should illuminate solid green.
+
+### Wi-Fi Connection Troubleshooting
+If the device loses connection to the local network or offline status appears in the app:
+- **2.4 GHz Network Band Required:** The QF-2025 requires a dedicated 2.4 GHz Wi-Fi band. Ensure your router broadcasts 2.4 GHz separately from 5 GHz.
+- **Wi-Fi Module Reset:** Hold the "Reset" button on the underside of the QF-2025 control module for 10 seconds until the Wi-Fi LED blinks rapidly in neon blue.
+- **Network Security:** Ensure your router uses WPA2-PSK or WPA3-Personal encryption. Enterprise 802.1X networks are not supported.
+
+---
+
+## Zenith Smart Thermostat Setup Guide
+
+1. Turn off main HVAC power at the breaker panel before starting installation.
+2. Remove old thermostat faceplate and label existing C, R, W, Y, and G wires.
+3. Mount the Zenith wallplate using the built-in bubble level and included mounting screws.
+4. Attach wire leads firmly into terminal blocks matching letter designations.
+5. Snap Zenith Smart Thermostat module onto the wallplate and restore main HVAC power.
+6. Follow the on-screen wizard to pair with the QuantumFlow mobile application via Bluetooth.

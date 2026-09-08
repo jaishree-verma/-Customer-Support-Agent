@@ -7,8 +7,5 @@ __pycache__
 .ruff_cache
 rag_evaluation_results.csv
 data/*.json
-data/*.txt
-data/*.pdf
-data/*.md
-/data
+!data/customer_support_manual.txt
 customer-support-rag-agent-using-langgraph/
