@@ -1,143 +1,227 @@
-# Advanced RAG Agent with LangGraph & Google Gemini & ChromaDB
+# Customer Support Agent
 
-## Project Overview
-This project implements an intelligent Retrieval-Augmented Generation (RAG) agent capable of answering complex user queries by leveraging a local knowledge base (ChromaDB) and Google's Gemini models for advanced reasoning and text generation. Built with `langgraph`, this agent demonstrates a robust, multi-step, and self-correcting research and synthesis workflow.
+Multi-agent retrieval-augmented generation system for enterprise customer support.
 
-## Architecture 
+---
 
-![RAG Agent Architecture Diagram](images/output.png)
+## Problem Statement
 
-## Features
-The RAG agent is structured into several interconnected phases, each handled by specialized "agent nodes":
+Standard linear Retrieval-Augmented Generation (RAG) architectures suffer from significant operational limitations when deployed in enterprise customer support environments:
 
-### Knowledge Base Construction (Phase 1)
-- **Document Loading:** Supports various document types (PDF, Markdown, Text).
-- **Text Chunking:** Divides documents into manageable segments.
-- **Embedding Generation:** Converts text chunks into vector embeddings using GoogleGenerativeAIEmbeddings.
-- **Vector Database Storage:** Stores chunks and their embeddings in a persistent ChromaDB instance locally.
+1. Single-Pass Query Failures: Naive RAG pipelines execute a single vector lookup for complex user prompts. If the initial search query misses key terms, the retriever fetches irrelevant document chunks, leading to incomplete or incorrect answers.
+2. Hallucinations Under Low Context: When retrieved contexts lack necessary details, standard LLM pipelines attempt to fill gaps by generating plausible but unverified statements (hallucinations), exposing enterprises to compliance and brand risks.
+3. Lack of Automated Evaluation: Linear RAG systems operate without feedback loops. There is no automated mechanism to check if retrieved documents contain sufficient facts to answer the user request before synthesizing a response.
 
-### Multi-Step Query Decomposition & Research Orchestration (Phase 3)
-- **Research Agent:** Breaks down a complex user query into smaller, more focused sub-queries using Gemini. It also manages the processing flow for each sub-query.
-- **Supervisor Agent:** Acts as the central orchestrator, directing the flow between different agent nodes based on the current state and task at hand.
+### Scenario Example
 
-### Intelligent Information Retrieval & Self-Correction (Phase 2)
-- **Retriever Agent:** Fetches the most relevant document chunks from ChromaDB for a given sub-query. Configurable to return top-K results.
-- **Evaluator Agent:** Utilizes Gemini to assess the sufficiency and relevance of the retrieved chunks to answer the `current_sub_query`.
-- **Self-Correction Loop:** If retrieved information is deemed insufficient, the Evaluator provides feedback (e.g., "try more specific keywords"), and the agent can re-attempt retrieval for the same sub-query, up to a defined maximum number of attempts.
+A customer asks a complex support query: "How do I troubleshoot Wi-Fi connection issues and check the circuit breaker for the QuantumFlow QF-2025?"
 
-### Answer Synthesis & Refinement (Phase 4)
-- **Synthesizer Agent:** Gathers all successfully retrieved and evaluated chunks for all sub-queries and synthesizes them into a comprehensive draft answer to the `original_query` using Gemini. It acknowledges any parts of the query that could not be answered.
-- **Formatter Agent:** Polishes the draft answer for clarity, conciseness, grammar, tone, and professional presentation using Gemini, preparing it for the end-user.
+- Naive RAG Approach: Performs a single vector search on the combined query. It fetches a generic Wi-Fi user manual page while omitting power circuit breaker details. The LLM attempts to guess power troubleshooting steps, leading to incorrect instructions.
+- Multi-Agent Approach: The Router decomposes the query into targeted sub-queries ("QuantumFlow QF-2025 Wi-Fi troubleshooting" and "QuantumFlow QF-2025 circuit breaker power checks"). The Retriever fetches chunks for each sub-query. The Evaluator detects that the power context is initially missing and triggers a self-correction loop to re-fetch document chunks. Once the Evaluator approves sufficiency, the Response Generator synthesizes a verified answer with citations.
 
-## Architecture
-The agent's intelligence and workflow are powered by `langgraph`, a library for building robust, stateful, multi-actor applications with LLMs. The core components are:
+---
 
-- **AgentState (TypedDict):** The central memory or "state" that is passed between all agent nodes. It holds the `original_query`, `sub_queries_list`, `retrieved_chunks`, `accumulated_relevant_chunks`, `final_answer`, and flags for `next_agent_to_call`, among others.
-- **Nodes (Agent Functions):** Each feature listed above is implemented as a Python function (a "node") that takes the AgentState as input, performs its specific task, updates the state, and sets `next_agent_to_call` to indicate the desired next step.
-- **Supervisor Node:** This special node reads `next_agent_to_call` from the state and determines the actual next node to execute, acting as the routing logic.
-- **Conditional Edges:** `langgraph` allows defining transitions based on the state, enabling complex loops and decision-making within the agent's workflow (e.g., retry retrieval, move to next sub-query, or end research).
+## Solution & Approach
+
+Customer Support Agent replaces linear RAG with a stateful multi-agent network built on LangGraph and Google Gemini. The system introduces self-correcting feedback loops, multi-step query decomposition, and a modern streaming web interface.
+
+### Execution Flow & Workflow Phases
+
+1. Phase 1: Knowledge Base Construction
+   - Document Loading: Supports PDF, Markdown, and Text documents.
+   - Text Chunking: Splits documents into manageable segments using RecursiveCharacterTextSplitter.
+   - Embedding Generation: Converts text chunks into vector embeddings using GoogleGenerativeAIEmbeddings.
+   - Vector Store Persistence: Stores chunks and embeddings in a local persistent ChromaDB instance.
+2. Phase 2: Multi-Step Query Decomposition & Research Orchestration
+   - Router Agent (Supervisor): Central orchestrator directing state flow between agent nodes based on next_agent_to_call.
+   - Research Agent: Breaks complex queries into ordered, focused sub-queries and manages research progression.
+3. Phase 3: Intelligent Retrieval & Self-Correction
+   - Retriever Agent: Fetches relevant document chunks from ChromaDB (with keyless local search fallback).
+   - Evaluator Agent: Assesses the sufficiency and relevance of retrieved chunks for the current sub-query.
+   - Self-Correction Loop: If retrieved information is deemed insufficient, the Evaluator provides feedback and loops back to the Retriever (up to MAX_RETRIEVAL_ATTEMPTS).
+4. Phase 4: Answer Synthesis & Refinement
+   - Synthesizer Agent: Combines all verified document chunks into a comprehensive draft answer.
+   - Formatter Agent: Polishes the draft answer for clarity, conciseness, grammar, and professional presentation.
+
+---
+
+## Why It Is Important & Key Benefits
+
+Enterprise automated support requires strict factual grounding, auditability, and predictability. Unchecked AI responses increase operational workload when users escalate failed automated interactions to human support teams.
+
+Key benefits include:
+
+- Reduction in Support Hallucinations: Evaluator gates ensure responses are synthesized exclusively from verified knowledge base contexts.
+- Verifiable Citations and Grounding: Every answer includes source attribution cards referencing document names, sections, and relevance match scores.
+- Automated Quality Checks: Built-in self-correction loops retry retrieval before delivering answers to users.
+- Lower Escalation Costs: Resolving complex multi-part queries automatically reduces support ticket volume and human agent intervention costs.
+
+---
+
+## System Architecture
+
+The workflow is managed as a stateful graph where each agent acts as a specialized node operating on a central `AgentState`.
+
+```
+                        +----------------------------+
+                        |         User Query         |
+                        +----------------------------+
+                                      |
+                                      v
+                        +----------------------------+
+                        |      Router Agent          |
+                        |      (Supervisor)          |
+                        +----------------------------+
+                          /           |            \
+                         /            |             \
+                        v             v              v
+           +-----------------+  +-----------------+  +------------------+
+           | Research Agent  |  | Retriever Agent |  | Evaluator Agent  |
+           | (Decomposition) |  |   (ChromaDB)    |  |  (Sufficiency)   |
+           +-----------------+  +-----------------+  +------------------+
+                        \             |              /
+                         \            |             /
+                          v           v            v
+                        +----------------------------+
+                        |  Self-Correction Evaluator  |
+                        |     Feedback Loop Loop     |
+                        +----------------------------+
+                                      |
+                                      v
+                        +----------------------------+
+                        |  Synthesizer & Formatter   |
+                        |     (Response Generator)   |
+                        +----------------------------+
+                                      |
+                                      v
+                        +----------------------------+
+                        | Grounded Final Answer + SSE|
+                        +----------------------------+
+```
+
+### Component Responsibilities
+
+- Router Agent (Supervisor): Central orchestrator reading state signals (`next_agent_to_call`) to direct execution to downstream nodes or signal workflow completion.
+- Research Agent: Decomposes complex user queries into an ordered list of clear sub-queries using Gemini.
+- Retriever Agent: Queries ChromaDB vector stores or local document stores to extract relevant document chunks for each sub-query.
+- Evaluator Agent: Performs LLM-assisted context verification to approve or reject retrieved document chunks, managing retry thresholds.
+- Response Generator (Synthesizer & Formatter): Combines all verified document chunks into a clear, formatted customer support report with source attributions.
+
+---
+
+## Tech Stack
+
+- Multi-Agent Framework: LangGraph, LangChain Core, LangChain Community
+- Language: Python 3.10+
+- Frontend: Next.js 15 (App Router), React 19, Tailwind CSS, Framer Motion, Zustand, Lucide Icons
+- API / Transport: FastAPI, Server-Sent Events (SSE), REST
+- Vector Database: ChromaDB, LangChain Chroma, Local Document Fallback Search
+- LLM Provider: Google Gemini (Gemini 2.0 Flash / Gemini 2.5)
+
+---
 
 ## Setup and Installation
 
+### Prerequisites
+
+- Python 3.10 or higher
+- Node.js 18.0 or higher
+- Google Gemini API Key
+
 ### 1. Clone the Repository
-```bash
-git clone <your-repo-link>
-cd <your-repo-name>
-```
-
-### 2. Create a Virtual Environment (Recommended)
-```bash
-uv venv venv
-# On Windows:
-venv\Scripts\activate
-# On macOS/Linux:
-source venv/bin/activate
-```
-
-### 3. Install Dependencies
-The project relies on `langchain`, `langgraph`, `chromadb`, `google-generativeai`, `python-dotenv`, `unstructured`, and `markdown`.
 
 ```bash
-uv pip install -r requirements.txt
+git clone https://github.com/jaishree-verma/-Customer-Support-Agent.git
+cd -Customer-Support-Agent
 ```
 
-**requirements.txt content:**
-```text
-langchain
-langchain-google-genai
-chromadb
-python-dotenv
-unstructured
-ipykernel
-langgraph
-langchain-community
-```
+### 2. Configure Environment Variables
 
-### 4. Set Up Google API Key
-You'll need a Google API Key for accessing Gemini models.
-
-1. Go to [Google AI Studio](https://makersuite.google.com/app/apikey).
-2. Create or retrieve an API key.
-3. Create a file named `.env` in the root directory of your project.
-4. Add your API key to the `.env` file like this:
+Create a `.env` file in the project root directory:
 
 ```env
-GEMINI_API_KEY="YOUR_API_KEY_HERE"
+GEMINI_API_KEY="YOUR_GOOGLE_GEMINI_API_KEY"
+GOOGLE_API_KEY="YOUR_GOOGLE_GEMINI_API_KEY"
 ```
 
-## Usage
-The project consists of two main parts: building the knowledge base and running the RAG agent.
-
-### 1. Build the Knowledge Base (Phase 1)
-This script processes your raw documents and creates the local ChromaDB vector store.
-
-- **Place your documents:** Ensure your `.txt`, `.md`, or `.pdf` documents are in the `data/documents` directory (relative to your script execution location, as defined by `RAW_DOCS_DIR`).
-
-- **Run the script:**
+### 3. Install Python Dependencies
 
 ```bash
-python scripts/build_knowledge_base.py
+python -m pip install -r requirements.txt
 ```
 
-This will create a `chroma_db` directory (default: `../chroma_db` relative to scripts/) containing your vector database. You only need to run this once, or whenever you add/update documents.
+### 4. Build Knowledge Base Index
 
-### 2. Run the RAG Agent (Phases 2, 3, & 4)
-This script orchestrates the entire RAG agent workflow, from query decomposition to final answer generation.
-
-- **Ensure Knowledge Base is Built:** Make sure you've run `build_knowledge_base.py` at least once.
-
-- **Run the agent:**
+Place your support documents (`.txt`, `.md`, `.pdf`) in the `data/` directory and run:
 
 ```bash
-python scripts/rag_agent_core.py
+python ingest.py
 ```
 
-- **Modify the test query:** In `rag_agent_core.py`, find the `test_original_query` variable within the `if __name__ == "__main__":` block. Change it to your desired complex query.
+This processes raw documents, generates embeddings, and creates the persistent ChromaDB vector store.
 
-```python
-# Example test query
-test_original_query = "Tell me how to set up the Zenith Smart Thermostat, including Wi-Fi connection, and how to troubleshoot common power and Wi-Fi issues."
+### 5. Start Backend FastAPI Server
+
+```bash
+python -m uvicorn app.main:app --reload --port 8000
 ```
 
-The console output will display the agent's step-by-step reasoning, retrieval attempts, evaluations, and finally, the synthesized and formatted answer.
+The REST and SSE API server will run on `http://127.0.0.1:8000`.
 
-## Project Structure
+### 6. Install and Start Frontend Web Portal
+
+In a new terminal window:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open `http://localhost:3000` in your web browser.
+
+---
+
+## Repository Structure
+
 ```
 .
-├── .env                  (Your Google API Key)
-├── requirements.txt      (Python dependencies)
-├── data/
-│   └── documents/        (Your raw PDF, MD, TXT documents go here)
-├── chroma_db/            (Automatically generated by build_knowledge_base.py)
-│   └── ...               (ChromaDB internal files)
-├── build_knowledge_base.ipynb  (Phase 1: Ingests documents into ChromaDB)
-├── main.ipynb            (Phases 2-4: The main RAG agent workflow)
+├── .env                              (Environment variables and Gemini API Key)
+├── requirements.txt                  (Python dependencies)
+├── ingest.py                         (Builds ChromaDB vector index from data/)
+├── main.py                           (Console execution entry point)
+├── app/
+│   ├── main.py                       (FastAPI server with CORS & SSE endpoints)
+│   └── schemas.py                    (Pydantic payload schemas)
+├── data/                             (Raw support manuals and document files)
+├── chroma_db/                        (ChromaDB vector store files)
+├── frontend/                         (Next.js App Router web application)
+│   ├── src/
+│   │   ├── app/                      (App Router layout and pages)
+│   │   ├── components/               (Navbar, AgentTracker, ChatInterface, SourceCard)
+│   │   ├── store/                    (Zustand chat state management)
+│   │   ├── lib/                      (SSE streaming client)
+│   │   └── types/                    (TypeScript interface definitions)
+│   ├── package.json
+│   └── tailwind.config.js
+├── notebooks/                        (Jupyter development notebooks)
+└── src/
+    ├── agents/                       (Router, Research, Retriever, Evaluator, Synthesizer, Formatter)
+    ├── config/                       (Configuration manager)
+    ├── constants/                    (System constants and attempt limits)
+    ├── data_ingestion/               (Document loaders and chunking pipeline)
+    ├── graph/                        (LangGraph workflow compilation)
+    ├── llm_config/                   (Gemini model and embeddings setup)
+    └── models/                       (AgentState TypedDict definition)
 ```
 
+---
+
 ## Future Enhancements
-- **Query Refinement Agent:** Introduce an agent that refines sub-queries based on evaluator feedback before re-attempting retrieval.
-- **Human-in-the-Loop:** Implement a mechanism to allow human intervention when the agent gets stuck or identifies an unanswerable query.
-- **Tool Use:** Integrate external tools (e.g., web search for out-of-knowledge-base queries, calculators).
-- **Chat Interface:** Build a simple web UI (e.g., with Streamlit or Flask) to interact with the agent.
-- **Evaluation Metrics:** Add automated evaluation to measure the quality of retrieved chunks and generated answers.
-- **Heterogeneous Data Sources:** Expand to retrieve from multiple types of databases or APIs.
+
+- Human-in-the-Loop Escalation Workflows: Seamless handover to human support agents when queries exceed retrieval thresholds or request account modifications.
+- Multi-Modal Query Support: Processing customer image uploads (error screenshots, hardware serial labels) alongside text queries.
+- Automated Evaluation Benchmark Suites: Integration of RAGAS and TruLens benchmark metrics to track retrieval precision and hallucination rates.
+- Multi-Tenant Vector Indexing: Tenant isolation and access control lists (ACLs) for enterprise multi-team document separation.
+- Real-Time Token Streaming: Direct token-by-token streaming from Gemini models into the SSE event stream for lower initial token latency.
+- External Tool Integration: Connecting web search APIs and ticketing systems (Zendesk, Jira) for out-of-knowledge-base queries.
