@@ -225,3 +225,14 @@ async def health_check():
         "graph_active": True,
         "model": "Google Gemini 2.5/Flash",
     }
+
+
+@app.get("/")
+async def root():
+    return {
+        "service": "Customer Support Agent API",
+        "status": "online",
+        "documentation": "/docs",
+        "health": "/api/health",
+        "version": "2.0.0",
+    }
