@@ -43,17 +43,16 @@ def build_knowledge_base(
 
             if extension in supported_extensions:
                 loader = supported_extensions[extension](file_path)
+                file_docs = loader.load()
                 updated_manifest[file_path] = True
-                documents.extend(loader.load())
-                print(f"Loaded {len(loader.load())} pages from {file}")
+                documents.extend(file_docs)
+                print(f"Loaded {len(file_docs)} pages from {file}")
             else:
                 print(f"Skipping unsupported file type: {file}")
 
     if not documents:
-        print("No documents loaded. Please check your data directory and file types.")
+        print("No documents loaded or all documents already processed in manifest.")
         return
-
-    save_json(updated_manifest, Path.joinpath(BASE_DIR, mainfest_path))
 
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
     texts = text_splitter.split_documents(documents)
@@ -64,6 +63,7 @@ def build_knowledge_base(
             persist_directory=chroma_db_dir,
             collection_name=collection_name,
         )
-        db.persist()
+        save_json(updated_manifest, Path.joinpath(BASE_DIR, mainfest_path))
+        print("Knowledge base built and manifest updated successfully.")
     except Exception as e:
         print(f"Error creating vector database: {e}")
