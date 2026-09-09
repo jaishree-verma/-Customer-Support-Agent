@@ -1,6 +1,6 @@
 # Customer Support Agent
 
-Multi-agent retrieval-augmented generation system for enterprise customer support.
+Built a multi-agent retrieval-augmented generation system for enterprise customer support.
 
 - Live Web Application: https://customersupportagent-ten.vercel.app/
 - Live Backend API: https://customer-support-agent-backend-p97d.onrender.com/
